@@ -57,12 +57,12 @@ class DHUPotatoPatch:
 
         return courses
 
-    def search_courses_by_id(self, courseID: str, termId) -> list:
+    def search_courses_by_id(self, courseID: str, termId = None) -> list:
 
         url = f"{BASE_URL}/PublicQuery/getCourseTimeTableInfo"
         payload = {
             "kcbh": courseID,
-            "termId": termId
+            "termId": self.semester if termId == None else termId,
         }
 
         response = requests.post(url, headers=self.headers, data=payload, params=param)
@@ -74,10 +74,6 @@ class DHUPotatoPatch:
         for i, row in enumerate(rows):
             if i % 2 == 0:
                 cols = row.find_all('td', style="text-align: center;vertical-align: inherit")
-                # cols_text = []
-                # for col in cols:
-                #     cols_text.append(col.text)
-                # courseInfo.append(cols_text)
                 courseInfo.append({
                     "courseName": cols[1].text,
                     "collage": cols[2].text,
@@ -173,11 +169,11 @@ class DHUPotatoPatch:
             "sortType": "desc"
         }
 
-        response = requests.post(url, headers=self.headers, data=payload, params=param)
-        
-        if response.text == "/dhu/casLogin" or json.loads(response.text)["success"] == False:
+        try:
+            response = requests.post(url, headers=self.headers, data=payload, params=param)
+            
+            for semester in json.loads(response.text)["semesterSS"]:
+                if semester["current"]:
+                    return semester["id"]
+        except:
             raise Exception("Cookie无效，请检查或更新Cookie")
-        
-        for semester in json.loads(response.text)["semesterSS"]:
-            if semester["current"]:
-                return semester["id"]

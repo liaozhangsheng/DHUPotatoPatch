@@ -179,3 +179,5 @@ pyrightconfig.json
 __pycache__
 .vscode
 example
+cookie
+test.py
