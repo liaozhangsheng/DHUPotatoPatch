@@ -186,7 +186,7 @@ class DHUPotatoPatch:
 
         return courses
 
-    def select_course(self, courseId: str, needMaterial: bool = False) -> bool:
+    def select_course(self, courseId: str, needMaterial: bool = False) -> dict:
         """
         Select a course.
 
@@ -213,9 +213,9 @@ class DHUPotatoPatch:
         response = requests.post(
             url, headers=self.headers, data=payload, params=param)
 
-        return response.json()["success"]
+        return response.json()
 
-    def remove_course(self, courseCode: str, classNo: int) -> bool:
+    def remove_course(self, courseCode: str, classNo: int) -> dict:
         """
         Remove a course.
 
@@ -242,7 +242,7 @@ class DHUPotatoPatch:
         response = requests.post(
             url, headers=self.headers, data=payload, params=param)
 
-        return response.json()["success"]
+        return response.json()
 
     def get_grades(self, semester: int = None) -> list:
         """
@@ -271,15 +271,17 @@ class DHUPotatoPatch:
         response = requests.post(
             url, headers=self.headers, data=payload, params=param)
 
-        return response.json()["list"][0]["courseGrades"]
+        response_list = response.json()["list"][0]["courseGrades"]
 
+        return [{"courseName": item["KCMC"], "credit": item["XF"], "grade": item["CJ"]} for item in response_list]
+    
     def get_gpa(self) -> list:
         """
         Get the GPA (Grade Point Average).
 
         Returns:
             list: A list of dictionaries representing the GPA for each semester, including the semester name
-                  and GPA value.
+                and GPA value.
 
         Example:
             ```python
@@ -295,7 +297,9 @@ class DHUPotatoPatch:
         response = requests.post(
             url, headers=self.headers, data=payload, params=param)
 
-        return response.json()["list"]
+        response_list = response.json()["list"]
+
+        return [{"averageGpa": item["ptjd"], "semester": item["xqbh"]} for item in response_list]
 
     def get_the_class_schedule(self):
         """
