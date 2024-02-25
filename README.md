@@ -51,3 +51,30 @@ print(bot.get_gpa())
 print(bot.get_grades())
 
 ```
+
+#### 小例子：查询体育部未满人的课并保存为csv文件
+
+```python
+from src.DHUPotatoPatch import DHUPotatoPatch
+import csv
+
+course_info = []
+
+for co in bot.search_courses_by_collage(3):
+    for cl in bot.search_courses_by_id(co["courseCode"], 81):
+        if cl["maxNum"] > cl["admit"]:
+            course_info.append(cl)
+
+headers = ['courseName', 'collage', 'courseCode', 'maxNum',
+           'admit', 'campus', 'teacher', 'week', 'time', 'location']
+
+with open('course_info.csv', 'w', newline='') as f:
+    writer = csv.DictWriter(f, fieldnames=headers)
+    writer.writeheader()
+
+    for info in course_info:
+        writer.writerow(info)
+
+print("done")
+
+```
