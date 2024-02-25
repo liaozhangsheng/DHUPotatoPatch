@@ -1,8 +1,15 @@
-import requests
+import httpx
+import asyncio
 from bs4 import BeautifulSoup
 
 param = "vpn-12-o2-jwgl.dhu.edu.cn"
 BASE_URL = "https://webproxy.dhu.edu.cn/https/446a5061214023323032323131446855152f7f4845a0b976a6a0aa1d0121c0/dhu"
+
+
+async def post_request(url: str, headers: dict, payload: dict, params: str) -> dict:
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=headers, data=payload, params=params)
+        return response.json()
 
 
 class DHUPotatoPatch:
@@ -40,7 +47,7 @@ class DHUPotatoPatch:
 
         self.semester = self.get_current_semester()
 
-    def search_courses_by_name(self, courseName: str, termId: int = None) -> list:
+    async def search_courses_by_name(self, courseName: str, termId: int = None) -> list:
         """
         Search courses by name.
 
@@ -85,12 +92,10 @@ class DHUPotatoPatch:
             "course": courseName,
         }
 
-        response = requests.post(
-            url, headers=self.headers, data=payload, params=param)
-        response_data = response.json()
+        response = await post_request(url, self.headers, payload, param)
 
         courses = []
-        for course in response_data["aaData"]:
+        for course in response["aaData"]:
             courses.append({
                 "courseName": course["kcmc"],
                 "courseCode": course["kcbh"],
@@ -100,7 +105,7 @@ class DHUPotatoPatch:
 
         return courses
 
-    def search_courses_by_id(self, courseCode: str, termId=None) -> list:
+    async def search_courses_by_id(self, courseCode: str, termId=None) -> list:
         """
         Search courses by ID.
 
@@ -125,10 +130,8 @@ class DHUPotatoPatch:
             "termId": self.semester if termId == None else termId,
         }
 
-        response = requests.post(
-            url, headers=self.headers, data=payload, params=param)
-        html_doc = response.json()["content"]
-        soup = BeautifulSoup(html_doc, 'html.parser')
+        response = await post_request(url, self.headers, payload, param)
+        soup = BeautifulSoup(response["content"], 'html.parser')
         rows = soup.find_all('tr')
 
         courseInfo = [
@@ -150,7 +153,7 @@ class DHUPotatoPatch:
 
         return courseInfo
 
-    def search_courses_by_collage(self, orgnId: int) -> list:
+    async def search_courses_by_collage(self, orgnId: int) -> list:
         """
         Search courses by collage.
 
@@ -172,12 +175,10 @@ class DHUPotatoPatch:
             "orgnId": orgnId,
         }
 
-        response = requests.post(
-            url, headers=self.headers, data=payload, params=param)
-        response_data = response.json()
+        response = await post_request(url, self.headers, payload, param)
 
         courses = []
-        for course in response_data["orgnCourses"]:
+        for course in response["orgnCourses"]:
             courses.append({
                 "credit": course["credit"],
                 "courseCode": course["courseCode"],
@@ -186,13 +187,13 @@ class DHUPotatoPatch:
 
         return courses
 
-    def select_course(self, courseId: str, needMaterial: bool = False) -> dict:
+    async def select_course(self, courseId: str, needMaterial: bool = False) -> dict:
         """
         Select a course.
 
         Args:
             courseId (str): The ID of the class to select.
-            needMaterial (bool, optional): Whether materials are needed for the course. Defaults to False.
+            needMaterial (bool, optional): Whether materials are needed for the course. async Defaults to False.
 
         Returns:
             bool: True if the course selection is successful, False otherwise.
@@ -210,12 +211,9 @@ class DHUPotatoPatch:
             "needMaterial": needMaterial
         }
 
-        response = requests.post(
-            url, headers=self.headers, data=payload, params=param)
+        return await post_request(url, self.headers, payload, param)
 
-        return response.json()
-
-    def remove_course(self, courseCode: str, classNo: int) -> dict:
+    async def remove_course(self, courseCode: str, classNo: int) -> dict:
         """
         Remove a course.
 
@@ -239,10 +237,7 @@ class DHUPotatoPatch:
             "cancelType": 1
         }
 
-        response = requests.post(
-            url, headers=self.headers, data=payload, params=param)
-
-        return response.json()
+        return await post_request(url, self.headers, payload, param)
 
     def get_grades(self, semester: int = None) -> list:
         """
@@ -268,10 +263,8 @@ class DHUPotatoPatch:
             "xh": "0"
         }
 
-        response = requests.post(
-            url, headers=self.headers, data=payload, params=param)
-
-        response_list = response.json()["list"][0]["courseGrades"]
+        response = httpx.post(url, headers=self.headers, data=payload, params=param).json()
+        response_list = response["list"][0]["courseGrades"]
 
         return [{"courseName": item["KCMC"], "credit": item["XF"], "grade": item["CJ"]} for item in response_list]
     
@@ -294,10 +287,9 @@ class DHUPotatoPatch:
             "type": 1
         }
 
-        response = requests.post(
-            url, headers=self.headers, data=payload, params=param)
+        response = httpx.post(url, headers=self.headers, data=payload, params=param).json()
 
-        response_list = response.json()["list"]
+        response_list = response["list"]
 
         return [{"averageGpa": item["ptjd"], "semester": item["xqbh"]} for item in response_list]
 
@@ -330,14 +322,12 @@ class DHUPotatoPatch:
         }
 
         try:
-            response = requests.post(
-                url, headers=self.headers, data=payload, params=param)
-            response_data = response.json()
+            response = httpx.post(url=url, headers=self.headers, data=payload, params=param).json()
         except:
             print("Invalid cookie! Please check that the cookie is correct.")
             exit(1)
 
-        if 'semesterSS' in response_data:
-            for semester in response_data["semesterSS"]:
+        if 'semesterSS' in response:
+            for semester in response["semesterSS"]:
                 if semester["current"]:
                     return semester["id"]
