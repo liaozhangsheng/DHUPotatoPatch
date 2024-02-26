@@ -83,11 +83,11 @@ class DHUPotatoPatch:
                 "admit": cols[7].text,
                 "campus": cols[8].text,
                 "teacher": cols[9].text,
-                "week": cols[10].text,
-                "time": cols[11].text,
-                "location": cols[12].text,
+                "week": cols[10].text if len(cols) > 10 else "",
+                "time": cols[11].text if len(cols) > 10 else "",
+                "location": cols[12].text if len(cols) > 10 else "",
             }
-            for i, row in enumerate(rows) if i % 2 == 0
+            for row in rows if len(row) > 4
             for cols in [row.find_all('td', style="text-align: center;vertical-align: inherit")]
         ]
 

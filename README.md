@@ -84,8 +84,6 @@ with open('course_info.csv', 'w', newline='', encoding='utf-8') as f:
     for cl in course_info:
         writer.writerow(cl)
 
-df = pd.read_csv('course_info.csv')
-
 print("done")
 
 ```
