@@ -29,6 +29,7 @@ class DHUPotatoPatch:
         self.is_first_login = False
 
     async def __async_post_request__(self, url: str, headers: dict, payload: dict, params: str) -> dict:
+        
         async with httpx.AsyncClient() as client:
             response = await client.post(url, headers=headers, data=payload, params=params)
 
@@ -47,7 +48,7 @@ class DHUPotatoPatch:
         async with async_playwright() as p:
             browser = await p.chromium.launch()
             page = await browser.new_page()
-            await page.goto(f"{BASE_URL}/casLogin")
+            await page.goto(BASE_URL)
             await page.wait_for_load_state("networkidle")
             await page.fill("#username", self.username)
             await page.fill("#password", self.password)
@@ -58,10 +59,10 @@ class DHUPotatoPatch:
             await page.wait_for_load_state("networkidle")
 
             try:
-                await page.wait_for_selector("#basisPhoto", timeout=5000)
-                login_success = True
-            except:
+                await page.wait_for_selector("#msg.auth_error", timeout=5000)
                 login_success = False
+            except:
+                login_success = True
 
             if not login_success:
                 await browser.close()
@@ -125,8 +126,8 @@ class DHUPotatoPatch:
         }
 
         response = await self.__async_post_request__(url, self.headers, payload, param)
-        soup = BeautifulSoup(response["content"], 'html.parser')
-        rows = soup.find_all('tr')
+        soup = BeautifulSoup(response["content"], "html.parser")
+        rows = soup.find_all("tr")
 
         courseInfo = [
             {
@@ -142,7 +143,7 @@ class DHUPotatoPatch:
                 "location": cols[12].text if len(cols) > 10 else "",
             }
             for row in rows if len(row) > 4
-            for cols in [row.find_all('td', style="text-align: center;vertical-align: inherit")]
+            for cols in [row.find_all("td", style="text-align: center;vertical-align: inherit")]
         ]
 
         return courseInfo
