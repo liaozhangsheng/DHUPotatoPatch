@@ -1,6 +1,7 @@
 from src.DHUPotatoPatch import DHUPotatoPatch
 import asyncio
 import csv
+import random
 
 async def main():
     bot = DHUPotatoPatch(username="username", password="password")
@@ -51,13 +52,10 @@ async def main():
     '''
     循环选课
     '''
-    # selected_courses = ["273933"]
-    # turn = 0
-    # while True:
-    #     turn += 1
-    #     for course in selected_courses:
-    #         print(f"Turn {turn}")
-    #         print(await bot.select_course(course))
-    #     await asyncio.sleep(60)
+    selected_courses = ["273933"]
+    while True:
+        for course in selected_courses:
+            print(await bot.select_course(course))
+        await asyncio.sleep(random.randint(20, 30))
     
 asyncio.run(main())

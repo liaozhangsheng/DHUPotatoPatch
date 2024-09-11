@@ -12,8 +12,12 @@
 from src.DHUPotatoPatch import DHUPotatoPatch
 import asyncio
 import csv
+import random
 
 async def main():
+    '''
+    初始化
+    '''
     bot = DHUPotatoPatch(username="username", password="password")
     await bot.init()
 
@@ -58,6 +62,15 @@ async def main():
         writer.writeheader()
         for course in course_info:
             writer.writerow(course)
+
+    '''
+    eg. 循环选课
+    '''
+    selected_courses = ["273933"]
+    while True:
+        for course in selected_courses:
+            print(await bot.select_course(course))
+        await asyncio.sleep(random.randint(20, 30))
     
 asyncio.run(main())
 ```

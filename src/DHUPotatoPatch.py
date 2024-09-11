@@ -8,12 +8,14 @@ BASE_URL = "https://webproxy.dhu.edu.cn/https/446a506121402332303232313144685515
 
 class DHUPotatoPatch:
 
-    def __init__(self, username: str = None, password: str = None):
+    def __init__(self, username: str = None, password: str = None, max_retries: int = 3, timeout: int = 10):
         self.username = username
         self.password = password
         self.headers = None
         self.current_semester = None
         self.is_first_login = True
+        self.max_retries = max_retries
+        self.timeout = timeout
 
     async def init(self):
 
@@ -29,19 +31,28 @@ class DHUPotatoPatch:
         self.is_first_login = False
 
     async def __async_post_request__(self, url: str, headers: dict, payload: dict, params: str) -> dict:
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, data=payload, params=params)
 
-            if response.status_code != 200:
-                if not self.is_first_login:
-                    print("Cookie expired, re-login...")
-                    self.headers = {
-                        "Cookie": await self.login_and_get_cookie(),
-                    }
-                    response = await client.post(url, headers=self.headers, data=payload, params=params)
+        for attempt in range(self.max_retries):
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(url, headers=headers, data=payload, params=params, timeout=self.timeout)
 
-            return response.json()
+                    if response.status_code != 200:
+                        if not self.is_first_login:
+                            print("Cookie expired, re-login...")
+                            self.headers = {
+                                "Cookie": await self.login_and_get_cookie(),
+                            }
+                            response = await client.post(url, headers=self.headers, data=payload, params=params, timeout=self.timeout)
+
+                    return response.json()
+            except httpx.TimeoutException:
+                if attempt < self.max_retries - 1:
+                    print(
+                        f"Request timed out. Retrying {attempt + 1}/{self.max_retries}...")
+                else:
+                    raise httpx.TimeoutException(
+                        f"Request failed after {self.max_retries} attempts due to timeout.")
 
     async def login_and_get_cookie(self) -> str:
 
