@@ -59,17 +59,17 @@ class DHUPotatoPatch:
         async with async_playwright() as p:
             browser = await p.chromium.launch()
             page = await browser.new_page()
-            await page.goto(BASE_URL)
-            await page.wait_for_load_state("networkidle")
-            await page.fill("#username", self.username)
-            await page.fill("#password", self.password)
-            await page.click(".auth_login_btn.primary.full_width")
-            await page.wait_for_load_state("networkidle")
-            await page.wait_for_load_state("load")
-            await page.wait_for_load_state("domcontentloaded")
-            await page.wait_for_load_state("networkidle")
 
             try:
+                await page.goto(BASE_URL)
+                await page.wait_for_load_state("networkidle")
+                await page.fill("#username", self.username)
+                await page.fill("#password", self.password)
+                await page.click(".auth_login_btn.primary.full_width")
+                await page.wait_for_load_state("networkidle")
+                await page.wait_for_load_state("load")
+                await page.wait_for_load_state("domcontentloaded")
+                await page.wait_for_load_state("networkidle")
                 await page.wait_for_selector("#msg.auth_error", timeout=5000)
                 login_success = False
             except:
@@ -167,6 +167,8 @@ class DHUPotatoPatch:
         }
 
         response = await self.__async_post_request__(url, self.headers, payload, param)
+        if not response["success"] or not response["orgnCourses"]:
+            return []
 
         courses = []
         for course in response["orgnCourses"]:
