@@ -6,6 +6,10 @@
 
 ---
 
+<div style="background-color: #fff3cd; border-left: 4px solid #ffeeba; padding: 10px; margin: 20px 0;">
+  <strong>⚠️ 注意:</strong> 此代码需要 <a href="https://nodejs.org/zh-cn/">nodejs</a> 环境（用于运行加密脚本）。
+</div>
+
 ### 示例
 
 ```python
@@ -15,18 +19,15 @@ import csv
 import random
 
 async def main():
-    '''
-    初始化
-    '''
-    bot = DHUPotatoPatch(username="username", password="password")
-    await bot.init()
+    # 83 代表 2024-2025第二学期，依此类推
+    bot = DHUPotatoPatch(username="username", password="password", current_semester="83")
 
     '''
     查课程
     '''
-    print(await bot.search_courses_by_name("微积分"))
-    print(await bot.search_courses_by_id("010761"))
-    print(await bot.search_courses_by_collage(1))
+    # print(await bot.search_courses_by_name("微积分"))
+    # print(await bot.search_courses_by_id("010761"))
+    # print(await bot.search_courses_by_collage(1))
 
     '''
     选课退课
@@ -37,11 +38,11 @@ async def main():
     '''
     查成绩、绩点
     '''
-    print(await bot.get_grades())
-    print(await bot.get_gpa())
-    
+    # print(await bot.get_grades())
+    # print(await bot.get_gpa())
+
     '''
-    eg. 查询未满人体育课
+    查询未满人体育课
     '''
     course_info = []
     tasks = []
@@ -54,9 +55,9 @@ async def main():
             if course["maxNum"] > course["admit"]:
                 course_info.append(course)
 
-    headers = ['courseName', 'collage', 'courseCode', 'maxNum',
-            'admit', 'campus', 'teacher', 'week', 'time', 'location']
-    
+    headers = ["courseName", "collage", "courseCode", "maxNum",
+               "admit", "campus", "teacher", "week", "time", "location"]
+
     with open("course_info.csv", "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader()
@@ -64,13 +65,15 @@ async def main():
             writer.writerow(course)
 
     '''
-    eg. 循环选课
+    循环选课
     '''
-    selected_courses = ["273933"]
-    while True:
-        for course in selected_courses:
-            print(await bot.select_course(course))
-        await asyncio.sleep(random.randint(20, 30))
-    
+    # selected_courses = ["273933", "273934"]
+    # while True:
+    #     for course in selected_courses:
+    #         print(await bot.select_course(course))
+    #     await asyncio.sleep(random.randint(20, 30))
+
 asyncio.run(main())
 ```
+
+### 仅供学习交流使用，请勿用于商业用途，否则后果自负。
