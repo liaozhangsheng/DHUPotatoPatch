@@ -1,5 +1,7 @@
 import httpx
-from playwright.async_api import async_playwright
+import requests
+import re
+import subprocess
 from bs4 import BeautifulSoup
 
 param = "vpn-12-o2-jwgl.dhu.edu.cn"
@@ -8,84 +10,117 @@ BASE_URL = "https://webproxy.dhu.edu.cn/https/446a506121402332303232313144685515
 
 class DHUPotatoPatch:
 
-    def __init__(self, username: str = None, password: str = None, max_retries: int = 3, timeout: int = 10):
+    def __init__(self, username: str, password: str, current_semester: int, max_retries: int = 3, timeout: int = 10):
+        
+        self.client = httpx.AsyncClient()
         self.username = username
         self.password = password
-        self.headers = None
-        self.current_semester = None
-        self.is_first_login = True
-        self.max_retries = max_retries
         self.timeout = timeout
-
-    async def init(self):
-
-        if not self.username or not self.password:
-            raise Exception(
-                "Please provide your username and password to login.")
-
+        self.is_first_login = False
+        self.max_retries = max_retries
         self.headers = {
-            "Cookie": await self.login_and_get_cookie(),
+            "Cookie": self.login_and_get_cookie(),
         }
 
-        self.current_semester = await self.get_current_semester()
-        self.is_first_login = False
+        self.current_semester = current_semester
 
     async def __async_post_request__(self, url: str, headers: dict, payload: dict, params: str) -> dict:
 
         for attempt in range(self.max_retries):
             try:
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(url, headers=headers, data=payload, params=params, timeout=self.timeout)
+                response = await self.client.post(url, headers=headers, data=payload, params=params, timeout=self.timeout)
 
-                    if response.status_code != 200:
-                        if not self.is_first_login:
-                            print("Cookie expired, re-login...")
-                            self.headers = {
-                                "Cookie": await self.login_and_get_cookie(),
-                            }
-                            response = await client.post(url, headers=self.headers, data=payload, params=params, timeout=self.timeout)
+                if response.status_code != 200:
+                    if not self.is_first_login:
+                        print("Cookie expired, re-login...")
+                        self.headers = {
+                            "Cookie": await self.login_and_get_cookie(),
+                        }
+                        response = await self.client.post(url, headers=self.headers, data=payload, params=params, timeout=self.timeout)
 
-                    return response.json()
+                return response.json()
             except httpx.TimeoutException:
                 if attempt < self.max_retries - 1:
                     print(
                         f"Request timed out. Retrying {attempt + 1}/{self.max_retries}...")
                 else:
+                    self.client.close()
                     raise httpx.TimeoutException(
                         f"Request failed after {self.max_retries} attempts due to timeout.")
 
-    async def login_and_get_cookie(self) -> str:
+    def __call_encrypt_aes__(self, salt):
 
-        async with async_playwright() as p:
-            browser = await p.chromium.launch()
-            page = await browser.new_page()
+        result = subprocess.run(
+            ['node', './js/encryptAESWrapper.js', self.password, salt], capture_output=True, text=True)
+        
+        return result.stdout.strip()
 
-            try:
-                await page.goto(BASE_URL)
-                await page.wait_for_load_state("networkidle")
-                await page.fill("#username", self.username)
-                await page.fill("#password", self.password)
-                await page.click(".auth_login_btn.primary.full_width")
-                await page.wait_for_load_state("networkidle")
-                await page.wait_for_load_state("load")
-                await page.wait_for_load_state("domcontentloaded")
-                await page.wait_for_load_state("networkidle")
-                await page.wait_for_selector("#msg.auth_error", timeout=5000)
-                login_success = False
-            except:
-                login_success = True
+    # TODO: Replacing requests with httpx
+    def login_and_get_cookie(self) -> str:
+        LOGIN_URL = "https://webproxy.dhu.edu.cn/https/446a50612140233230323231314468551c396b0a0faca42deda1bb464c2c/authserver/login"
+        PARAM = "service=http://jwgl.dhu.edu.cn/dhu/casLogin"
 
-            if not login_success:
-                await browser.close()
-                raise Exception(
-                    "Login failed, please check your username and password.")
+        session = requests.Session()
 
-            cookies = await page.context.cookies()
-            await browser.close()
-            cookie_str = "; ".join(
-                [f"{cookie['name']}={cookie['value']}" for cookie in cookies])
+        response = session.get(url=LOGIN_URL, params=PARAM)
+        cookie = response.headers.get('Set-Cookie')
+        result = response.text
+        pwd_default_encrypt_salt = re.search(
+            r'var pwdDefaultEncryptSalt = "(.*?)";', result).group(1)
+        lt = re.search(r'name="lt" value="(.*?)"', result).group(1)
+        execution = re.search(r'name="execution" value="(.*?)"', result).group(1)
+        route = re.search(r'route=(.*?);', cookie).group(1)
+        wengine_vpn_ticket = re.search(
+            r'wengine_vpn_ticketwebproxy_dhu_edu_cn=(.*?);', cookie).group(1)
 
-            return cookie_str
+        encrypted_password = self.__call_encrypt_aes__(pwd_default_encrypt_salt)
+        headers = {
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept-language": "zh-CN,zh;q=0.9,ja;q=0.8",
+            "cache-control": "max-age=0",
+            "content-type": "application/x-www-form-urlencoded",
+            "sec-ch-ua": "\"Not/A)Brand\";v=\"8\", \"Chromium\";v=\"126\", \"Google Chrome\";v=\"126\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "document",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-user": "?1",
+            "upgrade-insecure-requests": "1",
+            "cookie": f"route={route}; wengine_vpn_ticketwebproxy_dhu_edu_cn={wengine_vpn_ticket}",
+            "Referer": f"{LOGIN_URL}?{PARAM}",
+            "Referrer-Policy": "strict-origin-when-cross-origin"
+        }
+        data = {
+            "username": self.username,
+            "password": encrypted_password,
+            "lt": lt,
+            "dllt": "userNamePasswordLogin",
+            "execution": execution,
+            "_eventId": "submit",
+            "rmShown": "1"
+        }
+        response = session.post(url=LOGIN_URL, params=PARAM,
+                                headers=headers, data=data, allow_redirects=False)
+        location = response.headers.get('Location')
+        session.get(location, headers={
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept-language": "zh-CN,zh;q=0.9",
+            "cache-control": "no-cache",
+            "pragma": "no-cache",
+            "sec-ch-ua": "\"Not/A)Brand\";v=\"8\", \"Chromium\";v=\"126\", \"Google Chrome\";v=\"126\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "document",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "none",
+            "sec-fetch-user": "?1",
+            "upgrade-insecure-requests": "1"
+        })
+
+        cookies_str = "; ".join(
+            [f"{key}={value}" for key, value in session.cookies.items()])
+        return cookies_str
 
     async def search_courses_by_name(self, courseName: str, termId: int = None) -> list:
 
@@ -229,16 +264,3 @@ class DHUPotatoPatch:
     async def get_class_schedule(self) -> list:
 
         pass
-
-    async def get_current_semester(self) -> int:
-
-        url = f"{BASE_URL}/common/semesterSS"
-        payload = {
-            "ordered": True,
-            "sortType": "desc"
-        }
-        response = await self.__async_post_request__(url, self.headers, payload, param)
-
-        for semester in response["semesterSS"]:
-            if semester["current"]:
-                return semester["id"]
