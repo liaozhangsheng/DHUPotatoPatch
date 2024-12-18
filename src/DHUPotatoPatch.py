@@ -8,7 +8,7 @@ BASE_URL = "https://webproxy.dhu.edu.cn/https/446a506121402332303232313144685515
 
 class DHUPotatoPatch:
 
-    def __init__(self, username: str, password: str, current_semester: int, max_retries: int = 3, timeout: int = 10):
+    def __init__(self, username: str, password: str, current_semester: int, max_retries: int = 5, timeout: int = 10):
 
         self.client = httpx.AsyncClient()
         self.username = username
@@ -32,18 +32,14 @@ class DHUPotatoPatch:
                     self.headers = {
                         "Cookie": self.login_and_get_cookie(),
                     }
-                    response = await self.client.post(url, headers=self.headers, data=payload, params=params, timeout=self.timeout)
-
-                return response.json()
-
-            except httpx.TimeoutException:
+            except (httpx.TimeoutException, httpx.RequestError) as e:
                 if attempt < self.max_retries - 1:
                     print(
                         f"Request timed out. Retrying {attempt + 1}/{self.max_retries}...")
                 else:
-                    self.client.close()
-                    raise httpx.TimeoutException(
-                        f"Request failed after {self.max_retries} attempts due to timeout.")
+                    self.client.aclose()
+                    raise Exception(
+                        f"Request failed after {self.max_retries} attempts due to timeout.") from e
 
     def __call_encrypt_aes__(self, salt):
 
@@ -57,33 +53,51 @@ class DHUPotatoPatch:
         PARAM = "service=http://jwgl.dhu.edu.cn/dhu/casLogin"
 
         with httpx.Client() as client:
-            response = client.get(url=LOGIN_URL, params=PARAM)
-            result = response.text
+            for attempt in range(self.max_retries):
+                try:
+                    response = client.get(
+                        url=LOGIN_URL, params=PARAM, timeout=self.timeout)
 
-            login_data = {"username": self.username, }
+                    if response.status_code == 200:
+                        result = response.text
 
-            for hidden_input in BeautifulSoup(result, 'html.parser').find('form', id='casLoginForm').find_all('input', type='hidden'):
-                name = hidden_input.get('name')
-                value = hidden_input.get('value')
-                if not name:
-                    login_data["password"] = self.__call_encrypt_aes__(value)
-                    continue
-                login_data[name] = value
+                    login_data = {"username": self.username, }
 
-            response = client.post(
-                url=LOGIN_URL, params=PARAM, data=login_data, follow_redirects=True)
+                    for hidden_input in BeautifulSoup(result, 'html.parser').find('form', id='casLoginForm').find_all('input', type='hidden'):
+                        name = hidden_input.get('name')
+                        value = hidden_input.get('value')
+                        if not name:
+                            login_data["password"] = self.__call_encrypt_aes__(
+                                value)
+                            continue
+                        login_data[name] = value
 
-            cookies_str = "; ".join(
-                [f"{key}={value}" for key, value in client.cookies.items()])
+                    response = client.post(
+                        url=LOGIN_URL, params=PARAM, data=login_data, follow_redirects=True, timeout=self.timeout)
 
-            response = client.post(
-                url=f"{BASE_URL}/studentui/initstudinfo", params=param)
+                    cookies_str = "; ".join(
+                        [f"{key}={value}" for key, value in client.cookies.items()])
 
-            if response.status_code != 200:
-                raise ValueError(
-                    "Login failed, please check your username and password.")
+                    response = client.post(
+                        url=f"{BASE_URL}/studentui/initstudinfo", params=param, timeout=self.timeout)
 
-        return cookies_str
+                    if response.status_code != 200:
+                        if response.status_code == 302:
+                            raise ValueError(
+                                "Login failed, please check your username and password.")
+                        else:
+                            raise httpx.RequestError(
+                                f"Internal server error, please try again later. status code: {response.status_code}")
+
+                    return cookies_str
+
+                except (httpx.TimeoutException, AttributeError) as e:
+                    if attempt < self.max_retries - 1:
+                        print(
+                            f"Login failed. Retrying {attempt + 1}/{self.max_retries}...")
+                    else:
+                        raise Exception(
+                            f"Login failed after {self.max_retries} attempts.") from e
 
     async def search_courses_by_name(self, courseName: str, termId: int = None) -> list:
 

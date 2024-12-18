@@ -5,7 +5,8 @@ import random
 
 async def main():
     # 83 for the second semester of the 2024-2025 academic year, and so on
-    bot = DHUPotatoPatch(username="username", password="password", current_semester="83")
+    bot = DHUPotatoPatch(username="username", password="password",
+                         current_semester=83, max_retries=5, timeout=10)
 
     '''
     查课程
