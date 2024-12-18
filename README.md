@@ -20,7 +20,8 @@ import random
 
 async def main():
     # 83 代表 2024-2025第二学期，依此类推
-    bot = DHUPotatoPatch(username="username", password="password", current_semester="83")
+    bot = DHUPotatoPatch(username="password", password="username",
+                         current_semester=83, max_retries=5, timeout=10)
 
     '''
     查课程
@@ -44,34 +45,34 @@ async def main():
     '''
     查询未满人体育课
     '''
-    course_info = []
-    tasks = []
-    for course in await bot.search_courses_by_collage(3):
-        tasks.append(bot.search_courses_by_id(course["courseCode"]))
+    # course_info = []
+    # tasks = []
+    # for course in await bot.search_courses_by_collage(3):
+    #     tasks.append(bot.search_courses_by_id(course["courseCode"]))
 
-    results = await asyncio.gather(*tasks)
-    for result in results:
-        for course in result:
-            if course["maxNum"] > course["admit"]:
-                course_info.append(course)
+    # results = await asyncio.gather(*tasks)
+    # for result in results:
+    #     for course in result:
+    #         if course["maxNum"] > course["admit"]:
+    #             course_info.append(course)
 
-    headers = ["courseName", "collage", "courseCode", "maxNum",
-               "admit", "campus", "teacher", "week", "time", "location"]
+    # headers = ["courseName", "collage", "courseCode", "maxNum",
+    #            "admit", "campus", "teacher", "week", "time", "location"]
 
-    with open("course_info.csv", "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=headers)
-        writer.writeheader()
-        for course in course_info:
-            writer.writerow(course)
+    # with open("course_info.csv", "w", newline="") as f:
+    #     writer = csv.DictWriter(f, fieldnames=headers)
+    #     writer.writeheader()
+    #     for course in course_info:
+    #         writer.writerow(course)
 
     '''
     循环选课
     '''
-    # selected_courses = ["273933", "273934"]
-    # while True:
-    #     for course in selected_courses:
-    #         print(await bot.select_course(course))
-    #     await asyncio.sleep(random.randint(20, 30))
+    selected_courses = ["273933", "273934"]
+    while True:
+        for course in selected_courses:
+            print(await bot.select_course(course))
+        await asyncio.sleep(random.randint(20, 30))
 
 asyncio.run(main())
 ```

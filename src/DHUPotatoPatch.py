@@ -32,6 +32,9 @@ class DHUPotatoPatch:
                     self.headers = {
                         "Cookie": self.login_and_get_cookie(),
                     }
+                else:
+                    return response.json()
+                
             except (httpx.TimeoutException, httpx.RequestError) as e:
                 if attempt < self.max_retries - 1:
                     print(
