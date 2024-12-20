@@ -29,14 +29,12 @@ class DHUPotatoPatch:
 
                 if response.status_code != 200:
                     print("Login error, re-login...")
-                    self.headers = {
-                        "Cookie": self.login_and_get_cookie(),
-                    }
+                    self.headers["Cookie"] = self.login_and_get_cookie()
                 else:
                     return response.json()
-                
+
             except (httpx.TimeoutException, httpx.RequestError) as e:
-                if attempt < self.max_retries - 1:
+                if attempt < self.max_retries:
                     print(
                         f"Request timed out. Retrying {attempt + 1}/{self.max_retries}...")
                 else:
@@ -95,7 +93,7 @@ class DHUPotatoPatch:
                     return cookies_str
 
                 except (httpx.TimeoutException, AttributeError) as e:
-                    if attempt < self.max_retries - 1:
+                    if attempt < self.max_retries:
                         print(
                             f"Login failed. Retrying {attempt + 1}/{self.max_retries}...")
                     else:
@@ -152,6 +150,7 @@ class DHUPotatoPatch:
         }
 
         response = await self.__async_post_request__(url, self.headers, payload, param)
+
         soup = BeautifulSoup(response["content"], "html.parser")
         rows = soup.find_all("tr")
 

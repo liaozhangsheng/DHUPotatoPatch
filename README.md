@@ -19,8 +19,8 @@ import csv
 import random
 
 async def main():
-    # 83 代表 2024-2025第二学期，依此类推
-    bot = DHUPotatoPatch(username="password", password="username",
+    # 83 表示 2024-2025 学年第二学期
+    bot = DHUPotatoPatch(username="username", password="password",
                          current_semester=83, max_retries=5, timeout=10)
 
     '''
@@ -66,13 +66,29 @@ async def main():
     #         writer.writerow(course)
 
     '''
-    循环选课
+    循环选课（不验证是否满人会触发验证码）
     '''
-    selected_courses = ["273933", "273934"]
-    while True:
-        for course in selected_courses:
-            print(await bot.select_course(course))
-        await asyncio.sleep(random.randint(20, 30))
+    # 课程编号: [选课序号1, 选课序号2, ...]
+    selected_courses = {
+        "039701": ["278361", "278362"],
+        "039681": ["278364", "278365"],
+        "039661": ["278368"],
+    }
+    rounds = 1
+    while rounds != 0:
+        print(f"第 {rounds} 轮选课")
+        rounds += 1
+        for courseCode in selected_courses:
+            courses = await bot.search_courses_by_id(courseCode)
+            for course in courses:
+                if course["courseCode"] in selected_courses[courseCode] and course["maxNum"] > course["admit"]:
+                    print(await bot.select_course(course["courseCode"]))
+                    rounds = 0
+                    break
+            else:
+                continue
+            break
+        await asyncio.sleep(random.randint(5, 7))
 
 asyncio.run(main())
 ```
