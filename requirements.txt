@@ -1,3 +1,4 @@
 httpx
 asyncio
 beautifulsoup4
+pycryptodome

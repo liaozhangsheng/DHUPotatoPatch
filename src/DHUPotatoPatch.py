@@ -1,6 +1,7 @@
 import httpx
 from bs4 import BeautifulSoup
-import subprocess
+
+from .encryptAES import encryptAES
 
 param = "vpn-12-o2-jwgl.dhu.edu.cn"
 BASE_URL = "https://webproxy.dhu.edu.cn/https/446a5061214023323032323131446855152f7f4845a0b976a6a0aa1d0121c0/dhu"
@@ -42,13 +43,6 @@ class DHUPotatoPatch:
                     raise Exception(
                         f"Request failed after {self.max_retries} attempts due to timeout.") from e
 
-    def __call_encrypt_aes__(self, salt):
-
-        result = subprocess.run(
-            ['node', './js/encryptAESWrapper.js', self.password, salt], capture_output=True, text=True)
-
-        return result.stdout.strip()
-
     def login_and_get_cookie(self) -> str:
         LOGIN_URL = "https://webproxy.dhu.edu.cn/https/446a50612140233230323231314468551c396b0a0faca42deda1bb464c2c/authserver/login"
         PARAM = "service=http://jwgl.dhu.edu.cn/dhu/casLogin"
@@ -68,8 +62,8 @@ class DHUPotatoPatch:
                         name = hidden_input.get('name')
                         value = hidden_input.get('value')
                         if not name:
-                            login_data["password"] = self.__call_encrypt_aes__(
-                                value)
+                            login_data["password"] = encryptAES(
+                                self.password, value)
                             continue
                         login_data[name] = value
 
@@ -159,6 +153,7 @@ class DHUPotatoPatch:
                 "courseName": cols[1].text,
                 "collage": cols[2].text,
                 "courseCode": cols[3].text,
+                "classNo": cols[4].text,
                 "maxNum": cols[5].text,
                 "admit": cols[7].text,
                 "campus": cols[8].text,

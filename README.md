@@ -6,9 +6,12 @@
 
 ---
 
-<div style="background-color: #fff3cd; border-left: 4px solid #ffeeba; padding: 10px; margin: 20px 0;">
-  <strong>⚠️ 注意:</strong> 此代码需要 <a href="https://nodejs.org/zh-cn/">nodejs</a> 环境（用于运行加密脚本）。
-</div>
+### 安装依赖
+
+```bash
+pip install -r requirements.txt
+```
+
 
 ### 示例
 
