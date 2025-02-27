@@ -135,7 +135,7 @@ class DHUPotatoPatch:
 
         return courses
 
-    async def search_courses_by_id(self, courseCode: str, termId=None) -> list:
+    async def search_courses_by_code(self, courseCode: str, termId=None) -> list:
 
         url = f"{BASE_URL}/PublicQuery/getCourseTimeTableInfo"
         payload = {
@@ -150,9 +150,10 @@ class DHUPotatoPatch:
 
         courseInfo = [
             {
+                "courseCode": cols[0].text,
                 "courseName": cols[1].text,
                 "collage": cols[2].text,
-                "courseCode": cols[3].text,
+                "courseNo": cols[3].text,
                 "classNo": cols[4].text,
                 "maxNum": cols[5].text,
                 "admit": cols[7].text,
